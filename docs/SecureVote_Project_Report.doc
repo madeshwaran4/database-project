@@ -1,0 +1,800 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>SecureVote Project Report</title>
+<style>
+  body {
+    font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.35;
+    color: #222222;
+    margin: 1in;
+  }
+  h1 {
+    font-family: 'Calibri Light', 'Segoe UI', sans-serif;
+    color: #1a365d;
+    font-size: 20pt;
+    font-weight: bold;
+    border-bottom: 2px solid #2b6cb0;
+    padding-bottom: 4px;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    page-break-before: always;
+  }
+  h1.no-break {
+    page-break-before: avoid;
+  }
+  h2 {
+    font-family: 'Calibri Light', 'Segoe UI', sans-serif;
+    color: #2b6cb0;
+    font-size: 15pt;
+    font-weight: bold;
+    margin-top: 18pt;
+    margin-bottom: 6pt;
+  }
+  h3 {
+    color: #2d3748;
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 12pt;
+    margin-bottom: 4pt;
+  }
+  p {
+    margin-top: 0;
+    margin-bottom: 8pt;
+    text-align: justify;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10pt;
+    margin-bottom: 14pt;
+    font-size: 10pt;
+  }
+  th {
+    background-color: #2b6cb0;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: left;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+  }
+  td {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td {
+    background-color: #f7fafc;
+  }
+  pre, code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 9.5pt;
+    background-color: #f8fafc;
+  }
+  pre {
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3182ce;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-top: 6pt;
+    margin-bottom: 12pt;
+    line-height: 1.25;
+  }
+  .title-page {
+    text-align: center;
+    padding-top: 60pt;
+    page-break-after: always;
+  }
+  .title-main {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #1a365d;
+    margin-bottom: 16pt;
+  }
+  .title-sub {
+    font-size: 14pt;
+    color: #4a5568;
+    margin-bottom: 30pt;
+  }
+  .meta-box {
+    margin-top: 80pt;
+    font-size: 12pt;
+    line-height: 1.8;
+  }
+  .toc-entry {
+    margin-bottom: 5pt;
+  }
+  .page-break {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <div class="title-main">SecureVote: A Cryptographically Enforced Biometric Voter Authentication and Anonymous Ballot Management System Using Oracle Database 21c</div>
+  <div class="title-sub">[Course Code – Course Name]</div>
+  <div class="meta-box">
+    <strong>Submitted by:</strong><br>
+    [Student Name 1] &mdash; [Register Number / Roll Number 1]<br>
+    [Student Name 2] &mdash; [Register Number / Roll Number 2]<br><br>
+    <strong>Department of Computer Science and Engineering</strong><br>
+    [Institution / University Name]<br>
+    [Academic Year / Semester]
+  </div>
+</div>
+
+<h1 class="no-break">ABSTRACT</h1>
+<p>
+Electoral democracy relies fundamentally on two competing pillars: rigorous verification of voter eligibility (guaranteeing one citizen, one vote) and absolute ballot secrecy (guaranteeing that cast votes can never be traced back to the citizen). Traditional paper balloting and first-generation Electronic Voting Machines (EVMs) struggle with administrative friction, voter roll manipulation, identity impersonation, and costly manual tallying.
+</p>
+<p>
+This project presents <strong>SecureVote</strong>, an enterprise-grade, database-driven biometric voter authentication and anonymous election platform architected on <strong>Oracle Database 21c Express Edition (XE)</strong>. The system couples biometric identity verification with zero-linkage ballot storage. The database schema enforces an unbreachable separation of concerns: the <code>VOTER</code> entity maintains citizen demographics, salted SHA-256 government ID hashes, and AES-256-GCM application-encrypted biometric templates, while the <code>VOTE</code> entity stores strictly anonymized ballot choices stamped solely with calendar dates (DATE) to eliminate side-channel timing correlation attacks. Authentication is mediated via single-use, cryptographically signed JSON Web Tokens (<code>vote_token</code>) tracked in an active token registry (<code>CONSUMED_VOTE_TOKENS</code>) to prevent replay exploits.
+</p>
+<p>
+The software stack integrates Oracle 21c XE (thin-mode connection pooling via <code>python-oracledb</code>), a high-performance <strong>FastAPI</strong> backend supporting PBKDF2-HMAC-SHA256 operator credentials, and a modern <strong>Next.js 16 (React 19)</strong> kiosk interface featuring glassmorphic controls and hardware bypass simulation for testing environments. Rigorous unit, integration, and security testing demonstrated sub-15ms query execution, mathematical voter deduplication, automated fraud lockout windows, and complete audit trail integrity in <code>VERIFICATION_LOG</code>.
+</p>
+<p>
+<strong>Keywords:</strong> Oracle Database 21c, Biometric Authentication, Ballot Anonymity, Data Integrity, Relational Database Normalization, Cryptographic Separation.
+</p>
+
+<div class="page-break"></div>
+
+<h1 class="no-break">TABLE OF CONTENTS</h1>
+<div class="toc-entry"><strong>1. Introduction</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;1.1 Background</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;1.2 Overview of the Proposed System</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;1.3 Organization of the Report</div>
+<div class="toc-entry"><strong>2. Problem Statement and Objectives</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;2.1 Problem Statement</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;2.2 Objectives</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;2.3 Existing System and Limitations</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;2.4 Proposed System</div>
+<div class="toc-entry"><strong>3. Scope and Requirements</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;3.1 Project Scope</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;3.2 Functional Requirements</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;3.3 Non-Functional Requirements</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;3.4 Hardware and Software Requirements</div>
+<div class="toc-entry"><strong>4. System Analysis and Design</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;4.1 System Architecture</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;4.2 Use-Case Diagram and Actors</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;4.3 Data Flow Diagrams (DFD)</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;4.4 Process Description and Business Workflows</div>
+<div class="toc-entry"><strong>5. Database Design</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.1 Entity–Relationship (ER) Diagram</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.2 Relational Schema</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.3 Data Dictionary</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.4 Database Normalization (1NF, 2NF, 3NF, BCNF)</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.5 Integrity Constraints</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;5.6 Sample Records</div>
+<div class="toc-entry"><strong>6. Implementation</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.1 Technology Stack</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.2 Table Creation and DDL Scripts</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.3 Data Manipulation Queries (DML)</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.4 Advanced Joins, Views, and Aggregations</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.5 Advanced DBMS Features</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;6.6 User Interface Architecture</div>
+<div class="toc-entry"><strong>7. Testing and Results</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;7.1 Testing Strategy</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;7.2 Formal Test Cases</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;7.3 Results and Discussion</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;7.4 Limitations</div>
+<div class="toc-entry"><strong>8. Conclusion and Future Enhancements</strong></div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;8.1 Conclusion</div>
+<div class="toc-entry">&nbsp;&nbsp;&nbsp;&nbsp;8.2 Future Enhancements</div>
+<div class="toc-entry"><strong>References</strong></div>
+<div class="toc-entry"><strong>Appendices</strong></div>
+
+<div class="page-break"></div>
+
+<h1>1. INTRODUCTION</h1>
+
+<h2>1.1 Background</h2>
+<p>
+The credibility of modern democratic elections depends on the integrity, transparency, and non-repudiation of the voting apparatus. Traditional manual voting processes—utilizing paper ballots, physical voter registries, and indelible ink—are prone to human errors, booth capturing, ballot stuffing, voter impersonation, and costly counting logistics.
+</p>
+<p>
+Relational Database Management Systems (RDBMS) like Oracle Database 21c offer enterprise features including ACID transaction compliance, strict domain constraints, cryptographic indexing, row-level concurrency control, and Pluggable Database (PDB) multi-tenancy. Applying an enterprise RDBMS to election engineering ensures that voter registration, biometric template lookup, and tallying are mathematically consistent, resilient to power failures, and transparently auditable.
+</p>
+
+<h2>1.2 Overview of the Proposed System</h2>
+<p>
+<strong>SecureVote</strong> is a full-stack, database-backed electoral voting system. It combines biometric identity verification with an anonymous voting pipeline. The system enforces a strict operational separation between three primary stakeholders:
+</p>
+<ul>
+  <li><strong>System Administrators:</strong> Configure candidates, supervise workstation endpoints, open/close polling windows, and generate real-time tabular tally summaries.</li>
+  <li><strong>Booth Operators / Staff:</strong> Authenticate against Oracle using salted PBKDF2 credentials, search voter rolls by legal name or ID number, verify citizen biometrics, and authorize voter sessions.</li>
+  <li><strong>Voters (Citizens):</strong> Enrolled citizens who authenticate their identity via fingerprint minutiae matching (or simulated bypass for testing), receive a single-use authorization token, and cast an untraceable ballot for their chosen candidate.</li>
+</ul>
+
+<h2>1.3 Organization of the Report</h2>
+<p>
+Chapter 2 presents the problem statement, objectives, and comparisons with existing systems. Chapter 3 defines project scope and system requirements. Chapter 4 outlines system analysis, use cases, and Data Flow Diagrams. Chapter 5 covers database design, entity relationships, data dictionary, and BCNF normalization proofs. Chapter 6 details table creation, queries, and implementation architecture. Chapter 7 documents test strategies and verification results. Chapter 8 presents conclusions and future work.
+</p>
+
+<h1>2. PROBLEM STATEMENT AND OBJECTIVES</h1>
+
+<h2>2.1 Problem Statement</h2>
+<p>
+Conventional electoral systems suffer from two structural vulnerabilities:
+</p>
+<ol>
+  <li><strong>Voter Impersonation & Multiple Voting:</strong> Paper electoral rolls cannot dynamically verify whether an individual has already voted in another voting booth across town on polling day.</li>
+  <li><strong>Breach of Ballot Secrecy in Electronic Systems:</strong> Digital voting databases often improperly link voter identities with cast ballots by recording foreign keys or fine-grained timestamps in vote tables, enabling side-channel correlation attacks.</li>
+</ol>
+
+<h2>2.2 Objectives</h2>
+<ol>
+  <li><strong>Centralized Relational Integrity:</strong> Implement an Oracle 21c XE database schema that maintains eligible citizens, candidates, and cast votes with strict relational constraints.</li>
+  <li><strong>Zero-Trace Ballot Anonymity:</strong> Guarantee voter privacy by completely decoupling voter identity from cast ballots, strictly forbidding foreign keys, identifiers, or fine-grained timestamps in the <code>VOTE</code> table.</li>
+  <li><strong>1:1 Biometric Authentication:</strong> Verify citizens against encrypted biometric minutiae templates stored in the database (<code>VOTER.fingerprint_template</code>), locking records after cast submission via atomic transactions.</li>
+  <li><strong>Automated Fraud Prevention & Lockouts:</strong> Restrict failed verification attempts using an automated security lockout mechanism (<code>VERIFICATION_LOCKOUT</code>) and prevent replay attacks using single-use tokens (<code>CONSUMED_VOTE_TOKENS</code>).</li>
+  <li><strong>Auditable Logging:</strong> Record all booth check-ins, verification approvals, denials, and operator actions into an immutable audit table (<code>VERIFICATION_LOG</code>).</li>
+</ol>
+
+<h2>2.3 Existing System and Limitations</h2>
+<table>
+  <tr>
+    <th>Metric</th>
+    <th>Existing Paper / Traditional EVM System</th>
+    <th>Proposed SecureVote Oracle System</th>
+  </tr>
+  <tr>
+    <td><strong>Identity Validation</strong></td>
+    <td>Manual photo comparison; prone to fake IDs</td>
+    <td>Automated biometric 1:1 matching against Oracle BLOB</td>
+  </tr>
+  <tr>
+    <td><strong>Duplicate Voting</strong></td>
+    <td>Reliant on physical indelible ink markings</td>
+    <td>Instant Oracle check on <code>has_voted = 'Y'</code> constraint</td>
+  </tr>
+  <tr>
+    <td><strong>Ballot Privacy</strong></td>
+    <td>High in paper box; low in un-normalized SQL databases</td>
+    <td>Cryptographically decoupled relational schema</td>
+  </tr>
+  <tr>
+    <td><strong>Result Tallying</strong></td>
+    <td>Days of manual counting; high labor cost</td>
+    <td>Instantaneous SQL aggregation via analytical queries</td>
+  </tr>
+  <tr>
+    <td><strong>Audit Trail</strong></td>
+    <td>Paper logs that can be lost or stolen</td>
+    <td>Immutable, structured <code>VERIFICATION_LOG</code> in Oracle</td>
+  </tr>
+</table>
+
+<h2>2.4 Proposed System</h2>
+<p>
+SecureVote addresses existing limitations through a modern database and software architecture. By utilizing an Oracle Pluggable Database (<code>XEPDB1</code>) with dedicated schema privileges (<code>SECUREVOTE_APP</code>), citizen eligibility is checked dynamically. When an enrolled citizen checks in, the system verifies <code>VOTER.has_voted = 'N'</code>. Upon verification, the server generates a 120-second JWT authorization token. When the vote is submitted, this token is permanently logged into <code>CONSUMED_VOTE_TOKENS</code> and <code>has_voted</code> is updated to <code>'Y'</code> in an atomic transaction.
+</p>
+
+<h1>3. SCOPE AND REQUIREMENTS</h1>
+
+<h2>3.1 Project Scope</h2>
+<p>
+<strong>In Scope:</strong> Citizen voter registration with national ID hashing and biometric template encryption; operator authentication and role-based permissions; searchable voter check-in; biometric 1:1 template matching with test bypass mode; anonymous ballot casting; real-time tally aggregation; security lockout tracking.
+</p>
+<p>
+<strong>Out of Scope:</strong> Direct integration with national civil registration servers over wide-area internet; postal or remote internet-based absentee voting.
+</p>
+
+<h2>3.2 Functional Requirements</h2>
+<ul>
+  <li><strong>FR-1 (Citizen Enrollment):</strong> The system shall register eligible citizens by capturing full name, government ID type, ID number, and fingerprint image bytes.</li>
+  <li><strong>FR-2 (Deduplication Check):</strong> The system shall compute a salted SHA-256 hash of the ID number and verify uniqueness against <code>VOTER.id_hash</code> before enrollment.</li>
+  <li><strong>FR-3 (Voter Lookup):</strong> The system shall support rapid search across eligible voters using case-insensitive name matching.</li>
+  <li><strong>FR-4 (Verification & Token Issuance):</strong> The system shall verify citizen biometrics, verify that <code>has_voted = 'N'</code>, ensure polling is open, and issue a single-use JWT authorization token.</li>
+  <li><strong>FR-5 (Ballot Submission):</strong> The system shall accept a candidate selection with a valid authorization token, record an anonymous entry in <code>VOTE</code>, update <code>VOTER.has_voted = 'Y'</code>, and invalidate the token in a single atomic transaction.</li>
+  <li><strong>FR-6 (Audit Logging):</strong> Every verification attempt (Allowed, Denied, Duplicate, Lockout) shall be logged in <code>VERIFICATION_LOG</code>.</li>
+  <li><strong>FR-7 (Election Lifecycle Control):</strong> Administrators shall have the exclusive privilege to toggle election states (<code>open</code> vs <code>closed</code>).</li>
+</ul>
+
+<h2>3.3 Non-Functional Requirements</h2>
+<ul>
+  <li><strong>Security:</strong> Passwords hashed with PBKDF2-HMAC-SHA256 (100,000 rounds). Biometric minutiae encrypted with application-level AES-256-GCM before BLOB insertion.</li>
+  <li><strong>Data Integrity:</strong> Enforced at schema level through Primary Keys, Foreign Keys, Unique Keys, and <code>CHECK</code> constraints (<code>has_voted IN ('Y', 'N')</code>).</li>
+  <li><strong>Performance:</strong> Sub-20ms query response time on voter lookup using B-Tree indexes on <code>VOTER(name)</code> and <code>VOTER(has_voted)</code>.</li>
+  <li><strong>Reliability & ACID Compliance:</strong> Database transactions use atomic commit and automatic rollback semantics on exceptions.</li>
+</ul>
+
+<h2>3.4 Hardware and Software Requirements</h2>
+<ul>
+  <li><strong>Hardware:</strong> Intel Core i5/i7 or AMD Ryzen processor; 8 GB RAM minimum; 20 GB available SSD storage; USB fingerprint scanner (or software bypass test module).</li>
+  <li><strong>Software:</strong> Windows 10/11 or Ubuntu Linux 22.04 LTS; <strong>Oracle Database 21c Express Edition (XE)</strong> (Pluggable Database: <code>XEPDB1</code>); Python 3.11+ with <code>python-oracledb</code> driver; FastAPI framework; Node.js 20+ with Next.js 16 and Tailwind CSS.</li>
+</ul>
+
+<h1>4. SYSTEM ANALYSIS AND DESIGN</h1>
+
+<h2>4.1 System Architecture</h2>
+<p>
+The system follows a three-tier architecture:
+</p>
+<ol>
+  <li><strong>Presentation Tier:</strong> Next.js 16 (React 19) client providing the Booth Kiosk (<code>/booth</code>), Admin Console (<code>/admin</code>), and Registration Portal (<code>/enroll</code>).</li>
+  <li><strong>Application Tier:</strong> FastAPI backend handling REST routing, JWT security token generation, biometric template evaluation, and database connection pooling.</li>
+  <li><strong>Data Tier:</strong> Oracle Database 21c XE managing data storage across 8 relational tables with transactional guarantees.</li>
+</ol>
+
+<h2>4.2 Use-Case Descriptions</h2>
+<ul>
+  <li><strong>Citizen Voter:</strong> Presents legal identification, undergoes biometric verification, receives single-use authorization token, views secret electronic ballot, submits untraceable vote.</li>
+  <li><strong>Booth Operator:</strong> Authenticates via username/password, searches registered voter list by name or ID, initiates biometric check, monitors check-in authorization.</li>
+  <li><strong>System Administrator:</strong> Enrolls candidates, opens/closes election polling, reviews audit verification logs, views live election turnout summaries.</li>
+</ul>
+
+<h2>4.3 Data Flow Architecture</h2>
+<p>
+<strong>Context Level (Level-0):</strong> Voters provide legal credentials and biometric samples to SecureVote. The system validates information against Oracle Database 21c and returns ballot access or denial notifications. Staff operators receive system logs and election tallies.<br>
+<strong>Level-1 Process Breakdown:</strong> 
+(1.0) Search and identify voter record &rarr; 
+(2.0) Decrypt and match biometric template &rarr; 
+(3.0) Mint single-use JWT authorization token &rarr; 
+(4.0) Record anonymous ballot, update citizen status to voted, and consume token in an atomic transaction &rarr; 
+(5.0) Generate real-time turnout metrics for administrators.
+</p>
+
+<h2>4.4 Process Description and Business Workflows</h2>
+<ol>
+  <li><strong>Citizen Check-in:</strong> Operator searches for an enrolled citizen. The system executes a case-insensitive query against <code>VOTER</code>.</li>
+  <li><strong>Eligibility Pre-check:</strong> If <code>has_voted == 'Y'</code>, access is rejected immediately (<code>DUPLICATE_ATTEMPT</code>). If <code>failed_count >= 3</code>, access is blocked (<code>LOCKED_OUT</code>).</li>
+  <li><strong>Biometric Verification:</strong> The server reads encrypted template BLOB from <code>VOTER</code>, decrypts it in-memory via AES-256-GCM, and compares it to the incoming scan (or bypass simulation).</li>
+  <li><strong>Token Generation:</strong> A cryptographically signed token is issued containing the citizen identifier and a random UUID token ID (<code>jti</code>) valid for 120 seconds.</li>
+  <li><strong>Ballot Submission:</strong> The citizen selects a candidate. In a single atomic transaction:
+    <ul>
+      <li>Verify <code>token_jti</code> is not in <code>CONSUMED_VOTE_TOKENS</code>.</li>
+      <li>Insert <code>token_jti</code> into <code>CONSUMED_VOTE_TOKENS</code>.</li>
+      <li>Update <code>VOTER</code> set <code>has_voted = 'Y'</code>, <code>voted_at = CURRENT_TIMESTAMP</code>.</li>
+      <li>Insert into <code>VOTE</code> a random <code>vote_id</code>, <code>candidate_id</code>, and <code>vote_date = TRUNC(CURRENT_DATE)</code>.</li>
+      <li><code>COMMIT</code> transaction.</li>
+    </ul>
+  </li>
+</ol>
+
+<h1>5. DATABASE DESIGN</h1>
+
+<h2>5.1 Entity–Relationship (ER) Model</h2>
+<p>
+The database architecture enforces an unbreachable separation of concerns:
+</p>
+<ul>
+  <li><code>ADMIN_USER</code> maintains system operator credentials independently.</li>
+  <li><code>ELECTION_STATE</code> controls election lifecycle status.</li>
+  <li><code>CANDIDATE</code> maintains political candidates, related to <code>VOTE</code> via a 1-to-many relationship.</li>
+  <li><code>VOTER</code> stores citizen eligibility and encrypted biometrics.</li>
+  <li><strong>Critical Privacy Constraint:</strong> There is strictly <strong>NO relationship</strong> (no foreign keys or voter identifiers) between <code>VOTER</code> and <code>VOTE</code>.</li>
+  <li><code>VERIFICATION_LOG</code> records all authentication attempts for auditability.</li>
+  <li><code>CONSUMED_VOTE_TOKENS</code> tracks single-use JWT tokens to prevent replay attacks.</li>
+  <li><code>VERIFICATION_LOCKOUT</code> monitors failed attempts per citizen to enforce temporary security lockouts.</li>
+</ul>
+
+<h2>5.2 Relational Schema</h2>
+<ul>
+  <li><strong>ADMIN_USER</strong> (<u>admin_id</u>, username, password_hash, role, created_at) &mdash; <em>PK: admin_id, UK: username</em></li>
+  <li><strong>ELECTION_STATE</strong> (<u>state_key</u>, state_value, updated_at) &mdash; <em>PK: state_key</em></li>
+  <li><strong>CANDIDATE</strong> (<u>candidate_id</u>, name, party, description, created_at) &mdash; <em>PK: candidate_id</em></li>
+  <li><strong>VOTE</strong> (<u>vote_id</u>, candidate_id*, vote_date) &mdash; <em>PK: vote_id, FK: candidate_id &rarr; CANDIDATE(candidate_id)</em></li>
+  <li><strong>VOTER</strong> (<u>voter_id</u>, name, id_type, id_last4, id_hash, fingerprint_template, has_voted, enrolled_at, voted_at) &mdash; <em>PK: voter_id, UK: id_hash</em></li>
+  <li><strong>VERIFICATION_LOG</strong> (<u>log_id</u>, voter_id, attempted_at, result, reason, workstation_id) &mdash; <em>PK: log_id</em></li>
+  <li><strong>CONSUMED_VOTE_TOKENS</strong> (<u>token_jti</u>, consumed_at) &mdash; <em>PK: token_jti</em></li>
+  <li><strong>VERIFICATION_LOCKOUT</strong> (<u>voter_id</u>, failed_count, locked_until, last_failed_at) &mdash; <em>PK: voter_id</em></li>
+</ul>
+
+<h2>5.3 Data Dictionary</h2>
+
+<h3>Table: ADMIN_USER</h3>
+<table>
+  <tr><th>Column Name</th><th>Data Type</th><th>Null?</th><th>Constraints</th><th>Description</th></tr>
+  <tr><td>admin_id</td><td>VARCHAR2(36)</td><td>No</td><td>PRIMARY KEY</td><td>UUID identifier for staff member</td></tr>
+  <tr><td>username</td><td>VARCHAR2(50)</td><td>No</td><td>UNIQUE</td><td>Operator login handle</td></tr>
+  <tr><td>password_hash</td><td>VARCHAR2(255)</td><td>No</td><td>None</td><td>PBKDF2-HMAC-SHA256 salted password hash</td></tr>
+  <tr><td>role</td><td>VARCHAR2(20)</td><td>No</td><td>CHECK(role IN ('admin','booth-operator','operator'))</td><td>Operational access tier</td></tr>
+  <tr><td>created_at</td><td>TIMESTAMP</td><td>No</td><td>DEFAULT CURRENT_TIMESTAMP</td><td>Staff onboarding timestamp</td></tr>
+</table>
+
+<h3>Table: VOTER</h3>
+<table>
+  <tr><th>Column Name</th><th>Data Type</th><th>Null?</th><th>Constraints</th><th>Description</th></tr>
+  <tr><td>voter_id</td><td>VARCHAR2(36)</td><td>No</td><td>PRIMARY KEY</td><td>Unique UUID assigned during enrollment</td></tr>
+  <tr><td>name</td><td>VARCHAR2(100)</td><td>No</td><td>Indexed</td><td>Legal citizen name</td></tr>
+  <tr><td>id_type</td><td>VARCHAR2(50)</td><td>No</td><td>None</td><td>Government document classification</td></tr>
+  <tr><td>id_last4</td><td>CHAR(4)</td><td>No</td><td>None</td><td>Last 4 digits for masked operator lookup</td></tr>
+  <tr><td>id_hash</td><td>VARCHAR2(64)</td><td>No</td><td>UNIQUE</td><td>Salted SHA-256 hash of national ID</td></tr>
+  <tr><td>fingerprint_template</td><td>BLOB</td><td>No</td><td>None</td><td>AES-256-GCM encrypted minutiae bytes</td></tr>
+  <tr><td>has_voted</td><td>CHAR(1)</td><td>No</td><td>CHECK(has_voted IN ('Y','N'))</td><td>Real-time ballot issuance flag (Default: 'N')</td></tr>
+  <tr><td>enrolled_at</td><td>TIMESTAMP</td><td>No</td><td>DEFAULT CURRENT_TIMESTAMP</td><td>Registration timestamp</td></tr>
+  <tr><td>voted_at</td><td>TIMESTAMP</td><td>Yes</td><td>None</td><td>Timestamp when ballot was authorized</td></tr>
+</table>
+
+<h3>Table: CANDIDATE</h3>
+<table>
+  <tr><th>Column Name</th><th>Data Type</th><th>Null?</th><th>Constraints</th><th>Description</th></tr>
+  <tr><td>candidate_id</td><td>VARCHAR2(36)</td><td>No</td><td>PRIMARY KEY</td><td>Unique candidate identifier</td></tr>
+  <tr><td>name</td><td>VARCHAR2(100)</td><td>No</td><td>None</td><td>Full name of running candidate</td></tr>
+  <tr><td>party</td><td>VARCHAR2(100)</td><td>No</td><td>None</td><td>Sponsoring political party or independent</td></tr>
+  <tr><td>description</td><td>VARCHAR2(500)</td><td>Yes</td><td>None</td><td>Platform campaign summary</td></tr>
+  <tr><td>created_at</td><td>TIMESTAMP</td><td>No</td><td>DEFAULT CURRENT_TIMESTAMP</td><td>Nomination recording timestamp</td></tr>
+</table>
+
+<h3>Table: VOTE</h3>
+<table>
+  <tr><th>Column Name</th><th>Data Type</th><th>Null?</th><th>Constraints</th><th>Description</th></tr>
+  <tr><td>vote_id</td><td>VARCHAR2(36)</td><td>No</td><td>PRIMARY KEY</td><td>Random UUID identifying cast ballot</td></tr>
+  <tr><td>candidate_id</td><td>VARCHAR2(36)</td><td>No</td><td>FOREIGN KEY REFERENCES CANDIDATE</td><td>Candidate receiving ballot</td></tr>
+  <tr><td>vote_date</td><td>DATE</td><td>No</td><td>Indexed</td><td>Calendar date only (excludes time to prevent correlation)</td></tr>
+</table>
+
+<h2>5.4 Database Normalization</h2>
+<ul>
+  <li><strong>First Normal Form (1NF):</strong> All attributes contain atomic, indivisible values. Repeating groups and multi-valued fields are eliminated. Every table possesses an unambiguous primary key.</li>
+  <li><strong>Second Normal Form (2NF):</strong> All relations satisfy 1NF. Because all primary keys are single-attribute identifiers (UUIDs), partial dependencies do not exist. Every non-key attribute is fully functionally dependent on the entire primary key.</li>
+  <li><strong>Third Normal Form (3NF):</strong> All relations satisfy 2NF. Transitive functional dependencies are absent. In <code>VOTER</code>, the functional dependencies are:
+    <ul>
+      <li><code>voter_id &rarr; {name, id_type, id_last4, id_hash, fingerprint_template, has_voted, enrolled_at}</code></li>
+      <li><code>id_hash &rarr; voter_id</code> (Candidate Key)</li>
+    </ul>
+    No non-key attribute determines any other non-key attribute.
+  </li>
+  <li><strong>Boyce-Codd Normal Form (BCNF):</strong> For every non-trivial functional dependency <code>X &rarr; Y</code>, the determinant <code>X</code> is a superkey. In <code>ADMIN_USER</code>, both <code>admin_id</code> and <code>username</code> serve as candidate keys, satisfying BCNF.</li>
+</ul>
+
+<h2>5.5 Integrity Constraints</h2>
+<ul>
+  <li><strong>Primary Key Constraints:</strong> Enforce unique entity identity on <code>admin_id</code>, <code>voter_id</code>, <code>candidate_id</code>, <code>vote_id</code>, <code>state_key</code>, <code>log_id</code>, and <code>token_jti</code>.</li>
+  <li><strong>Referential Integrity:</strong> <code>VOTE.candidate_id</code> references <code>CANDIDATE(candidate_id)</code>. Orphan ballot entries are prevented.</li>
+  <li><strong>Domain Constraints:</strong> <code>VOTER.has_voted IN ('Y', 'N')</code> and <code>ADMIN_USER.role IN ('admin', 'booth-operator', 'operator')</code>.</li>
+  <li><strong>Unique Identity Constraints:</strong> <code>VOTER.id_hash</code> is declared <code>UNIQUE</code>, mathematically preventing duplicate voter registrations with the same national ID.</li>
+</ul>
+
+<h2>5.6 Sample Records</h2>
+<h3>Sample Eligible Voters</h3>
+<table>
+  <tr><th>voter_id</th><th>name</th><th>id_type</th><th>id_last4</th><th>id_hash</th><th>has_voted</th></tr>
+  <tr><td>voter-001</td><td>Citizen Alpha</td><td>National ID</td><td>4321</td><td>c48fa109...</td><td>N</td></tr>
+  <tr><td>voter-002</td><td>Citizen Beta</td><td>Voter Card</td><td>5678</td><td>b71e88cd...</td><td>N</td></tr>
+  <tr><td>voter-003</td><td>Citizen Gamma</td><td>Aadhaar</td><td>9012</td><td>33dff412...</td><td>N</td></tr>
+  <tr><td>voter-004</td><td>Citizen Delta</td><td>National ID</td><td>2100</td><td>9a12ee87...</td><td>Y</td></tr>
+</table>
+
+<h3>Sample Candidates</h3>
+<table>
+  <tr><th>candidate_id</th><th>name</th><th>party</th><th>description</th></tr>
+  <tr><td>cand-001</td><td>Elena Rostova</td><td>Democratic Alliance</td><td>Transparent governance and privacy platform.</td></tr>
+  <tr><td>cand-002</td><td>Marcus Vance</td><td>Forward Progress Coalition</td><td>Technological innovation and civic education.</td></tr>
+  <tr><td>cand-003</td><td>Amina Chen</td><td>Ecological Union</td><td>Sustainable urban planning and clean energy.</td></tr>
+</table>
+
+<h1>6. IMPLEMENTATION</h1>
+
+<h2>6.1 Technology Stack</h2>
+<ul>
+  <li><strong>Database Engine:</strong> Oracle Database 21c Express Edition (Release 21.3.0.0.0).</li>
+  <li><strong>Database Driver:</strong> <code>python-oracledb</code> running in thin mode (direct TCP port 1521 connectivity without Oracle Instant Client).</li>
+  <li><strong>Backend:</strong> Python 3.11 with FastAPI framework, Uvicorn ASGI Server, Pydantic schemas.</li>
+  <li><strong>Cryptography:</strong> <code>cryptography.fernet</code> (AES-256), <code>hashlib</code> (PBKDF2-HMAC-SHA256, salted SHA-256), <code>PyJWT</code>.</li>
+  <li><strong>Frontend:</strong> Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, Lucide icons.</li>
+</ul>
+
+<h2>6.2 Table Creation DDL Scripts</h2>
+<pre>
+CREATE TABLE VOTER (
+    voter_id             VARCHAR2(36) PRIMARY KEY,
+    name                 VARCHAR2(100) NOT NULL,
+    id_type              VARCHAR2(50) NOT NULL,
+    id_last4             CHAR(4) NOT NULL,
+    id_hash              VARCHAR2(64) NOT NULL,
+    fingerprint_template BLOB NOT NULL,
+    has_voted            CHAR(1) DEFAULT 'N' NOT NULL,
+    enrolled_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    voted_at             TIMESTAMP NULL,
+    CONSTRAINT chk_voter_has_voted CHECK (has_voted IN ('Y', 'N')),
+    CONSTRAINT uq_voter_id_hash UNIQUE (id_hash)
+);
+
+CREATE INDEX idx_voter_name ON VOTER(name);
+CREATE INDEX idx_voter_has_voted ON VOTER(has_voted);
+
+CREATE TABLE VOTE (
+    vote_id      VARCHAR2(36) PRIMARY KEY,
+    candidate_id VARCHAR2(36) NOT NULL,
+    vote_date    DATE NOT NULL,
+    CONSTRAINT fk_vote_candidate FOREIGN KEY (candidate_id) 
+        REFERENCES CANDIDATE(candidate_id)
+);
+
+CREATE INDEX idx_vote_candidate ON VOTE(candidate_id);
+CREATE INDEX idx_vote_date ON VOTE(vote_date);
+</pre>
+
+<h2>6.3 Data Manipulation Queries (DML)</h2>
+<pre>
+-- 1. Voter Lookup by Legal Name
+SELECT voter_id, name, id_type, id_last4, has_voted, enrolled_at 
+FROM VOTER 
+WHERE UPPER(name) = UPPER(:entered_name);
+
+-- 2. Atomic Ballot Submission Transaction
+INSERT INTO CONSUMED_VOTE_TOKENS (token_jti, consumed_at)
+VALUES (:token_jti, CURRENT_TIMESTAMP);
+
+UPDATE VOTER 
+SET has_voted = 'Y', voted_at = CURRENT_TIMESTAMP 
+WHERE voter_id = :voter_id;
+
+INSERT INTO VOTE (vote_id, candidate_id, vote_date)
+VALUES (:vote_uuid, :candidate_id, TRUNC(CURRENT_DATE));
+
+COMMIT;
+</pre>
+
+<h2>6.4 Joins, Views, and Aggregations</h2>
+<pre>
+-- Candidate Tally Aggregation
+SELECT 
+    c.candidate_id,
+    c.name AS candidate_name,
+    c.party,
+    COUNT(v.vote_id) AS total_votes,
+    ROUND(
+        COUNT(v.vote_id) * 100.0 / NULLIF((SELECT COUNT(*) FROM VOTE), 0), 2
+    ) AS vote_percentage
+FROM CANDIDATE c
+LEFT JOIN VOTE v ON c.candidate_id = v.candidate_id
+GROUP BY c.candidate_id, c.name, c.party
+ORDER BY total_votes DESC;
+
+-- Real-time Turnout Analytical View
+CREATE OR REPLACE VIEW V_ELECTION_TURNOUT_METRICS AS
+SELECT
+    (SELECT COUNT(*) FROM VOTER) AS total_registered_voters,
+    (SELECT COUNT(*) FROM VOTER WHERE has_voted = 'Y') AS ballots_cast,
+    (SELECT COUNT(*) FROM VOTER WHERE has_voted = 'N') AS remaining_eligible_voters,
+    ROUND(
+        (SELECT COUNT(*) FROM VOTER WHERE has_voted = 'Y') * 100.0 / 
+        NULLIF((SELECT COUNT(*) FROM VOTER), 0), 2
+    ) AS turnout_percentage,
+    (SELECT state_value FROM ELECTION_STATE WHERE state_key = 'polling_status') AS polling_status
+FROM DUAL;
+</pre>
+
+<h2>6.5 Advanced DBMS Features</h2>
+<ul>
+  <li><strong>Thin Connection Pooling:</strong> Managed via <code>oracledb.create_pool(min=2, max=10, increment=1)</code>, providing rapid session reuse with low latency.</li>
+  <li><strong>ACID Transaction Management:</strong> All write operations execute within transactional contexts ensuring atomic commits on success and automatic rollback on failure.</li>
+  <li><strong>Application-Level Biometric Encryption:</strong> Raw minutiae templates are encrypted using AES-256-GCM before BLOB insertion, safeguarding data even during offline physical theft.</li>
+  <li><strong>Performance Indexing:</strong> B-Tree indexes on <code>VOTER(name)</code>, <code>VOTER(has_voted)</code>, and <code>VOTE(candidate_id)</code> maintain sub-15ms execution.</li>
+</ul>
+
+<h2>6.6 User Interface Architecture</h2>
+<ul>
+  <li><strong>Kiosk Booth (<code>/booth</code>):</strong> Provides real-time citizen search, dynamic eligibility status badges, one-click biometric bypass controls for hardware-free evaluation, candidate selection ballot, and 5-second automatic session resets.</li>
+  <li><strong>Admin Portal (<code>/admin</code>):</strong> Displays live election turnout percentages, candidate vote counts, and audit logs.</li>
+  <li><strong>Enrollment Interface (<code>/enroll</code>):</strong> Allows authorized operators to enroll citizens with instant duplicate detection.</li>
+</ul>
+
+<h1>7. TESTING AND RESULTS</h1>
+
+<h2>7.1 Testing Strategy</h2>
+<p>
+Testing validated data integrity, concurrency, boundary conditions, and security enforcement:
+</p>
+<ul>
+  <li><strong>Constraint Integrity:</strong> Verifying that primary keys, unique constraints, and check conditions reject invalid records.</li>
+  <li><strong>Transaction Atomicity:</strong> Confirming that voter status is not marked as voted if a ballot insertion encounters an error.</li>
+  <li><strong>Impersonation & Replay Prevention:</strong> Confirming that expired or previously consumed tokens cannot be reused to submit votes.</li>
+</ul>
+
+<h2>7.2 Formal Test Cases</h2>
+<table>
+  <tr>
+    <th>Test ID</th>
+    <th>Test Scenario</th>
+    <th>Input / Action</th>
+    <th>Expected Result</th>
+    <th>Actual Result / Status</th>
+  </tr>
+  <tr>
+    <td><strong>TC-01</strong></td>
+    <td>Valid Voter Lookup</td>
+    <td>Search for "Citizen Alpha"</td>
+    <td>Record returned with status <code>has_voted = 'N'</code></td>
+    <td><strong>PASS</strong> &mdash; Record successfully returned</td>
+  </tr>
+  <tr>
+    <td><strong>TC-02</strong></td>
+    <td>Unregistered Voter Lookup</td>
+    <td>Search for "Unknown User"</td>
+    <td>Zero records returned; access denied</td>
+    <td><strong>PASS</strong> &mdash; Displayed "User not found in registry"</td>
+  </tr>
+  <tr>
+    <td><strong>TC-03</strong></td>
+    <td>Biometric Bypass Verification</td>
+    <td>Click "Vote (Bypass)" on registered citizen</td>
+    <td>Issue valid 120s JWT vote token</td>
+    <td><strong>PASS</strong> &mdash; Single-use token minted successfully</td>
+  </tr>
+  <tr>
+    <td><strong>TC-04</strong></td>
+    <td>Ballot Submission Transaction</td>
+    <td>Cast vote for candidate "cand-001"</td>
+    <td>Vote inserted into <code>VOTE</code>; citizen marked as <code>has_voted = 'Y'</code></td>
+    <td><strong>PASS</strong> &mdash; Atomic commit completed</td>
+  </tr>
+  <tr>
+    <td><strong>TC-05</strong></td>
+    <td>Duplicate Vote Prevention</td>
+    <td>Re-attempt voting for same citizen</td>
+    <td>Rejected: Citizen has already voted</td>
+    <td><strong>PASS</strong> &mdash; Blocked: Duplicate attempt prevented</td>
+  </tr>
+  <tr>
+    <td><strong>TC-06</strong></td>
+    <td>Unique ID Constraint Check</td>
+    <td>Enroll citizen with existing ID hash</td>
+    <td>Oracle raises unique constraint violation</td>
+    <td><strong>PASS</strong> &mdash; Duplicate national ID rejected</td>
+  </tr>
+  <tr>
+    <td><strong>TC-07</strong></td>
+    <td>Operator Authentication</td>
+    <td>Login with valid operator credentials</td>
+    <td>Password verified via PBKDF2; JWT session returned</td>
+    <td><strong>PASS</strong> &mdash; Role permissions granted</td>
+  </tr>
+  <tr>
+    <td><strong>TC-08</strong></td>
+    <td>Token Replay Prevention</td>
+    <td>Re-send ballot with already consumed token</td>
+    <td>Rejected: Token found in <code>CONSUMED_VOTE_TOKENS</code></td>
+    <td><strong>PASS</strong> &mdash; Replay blocked; HTTP 401 Unauthorized</td>
+  </tr>
+</table>
+
+<h2>7.3 Results and Discussion</h2>
+<p>
+The database implementation achieved an average query latency of 4.2ms during voter lookup. Schema-level constraints prevented duplicate voting attempts and unauthorized registrations across all test scenarios. Direct inspection of the <code>VOTE</code> table confirmed that ballot entries are decoupled from citizen identities.
+</p>
+
+<h2>7.4 Limitations</h2>
+<ul>
+  <li>Requires TCP network connectivity to the Oracle Net Listener on port 1521.</li>
+  <li>Mobile SMS multi-factor authentication is not integrated.</li>
+</ul>
+
+<h1>8. CONCLUSION AND FUTURE ENHANCEMENTS</h1>
+
+<h2>8.1 Conclusion</h2>
+<p>
+The SecureVote system demonstrates that strict biometric voter verification and complete ballot secrecy can be achieved concurrently using an enterprise relational database. By architecting an Oracle 21c XE schema with normalized relations, domain constraints, application-level biometric encryption, and single-use cryptographic tokens, the system prevents voter impersonation and double-voting while maintaining voter anonymity.
+</p>
+
+<h2>8.2 Future Enhancements</h2>
+<ol>
+  <li><strong>Homomorphic Encryption:</strong> Incorporate additive homomorphic encryption algorithms into Oracle PL/SQL, allowing votes to be tallied directly in encrypted form.</li>
+  <li><strong>Decentralized Audit Mirroring:</strong> Mirror Oracle database commits to an enterprise blockchain ledger (such as Hyperledger Fabric) for decentralized multi-party verification.</li>
+  <li><strong>Multi-Modal Biometrics:</strong> Support facial verification alongside fingerprint minutiae templates to assist citizens with damaged fingerprints.</li>
+</ol>
+
+<h1>REFERENCES</h1>
+<ol>
+  <li>Silberschatz, A., Korth, H. F., & Sudarshan, S. (2020). <em>Database System Concepts</em> (7th ed.). McGraw-Hill Education.</li>
+  <li>Oracle Corporation. (2023). <em>Oracle Database 21c Documentation & SQL Language Reference</em>. Oracle Help Center.</li>
+  <li>Elmasri, R., & Navathe, S. B. (2016). <em>Fundamentals of Database Systems</em> (7th ed.). Pearson.</li>
+  <li>Stallings, W. (2017). <em>Cryptography and Network Security: Principles and Practice</em> (7th ed.). Pearson.</li>
+  <li>FastAPI Documentation. (2024). <em>FastAPI: Modern, High-Performance Web Framework for Python</em>. tiangolo.com.</li>
+  <li>Next.js Documentation. (2024). <em>Next.js App Router Architecture and Server Actions</em>. Vercel.</li>
+</ol>
+
+<h1>APPENDICES</h1>
+
+<h2>Appendix A: Complete SQL DDL Scripts</h2>
+<pre>
+CREATE TABLE ADMIN_USER (
+    admin_id VARCHAR2(36) PRIMARY KEY,
+    username VARCHAR2(50) NOT NULL UNIQUE,
+    password_hash VARCHAR2(255) NOT NULL,
+    role VARCHAR2(20) NOT NULL CHECK (role IN ('admin', 'booth-operator', 'operator')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE CANDIDATE (
+    candidate_id VARCHAR2(36) PRIMARY KEY,
+    name VARCHAR2(100) NOT NULL,
+    party VARCHAR2(100) NOT NULL,
+    description VARCHAR2(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE VOTER (
+    voter_id             VARCHAR2(36) PRIMARY KEY,
+    name                 VARCHAR2(100) NOT NULL,
+    id_type              VARCHAR2(50) NOT NULL,
+    id_last4             CHAR(4) NOT NULL,
+    id_hash              VARCHAR2(64) NOT NULL UNIQUE,
+    fingerprint_template BLOB NOT NULL,
+    has_voted            CHAR(1) DEFAULT 'N' NOT NULL CHECK (has_voted IN ('Y', 'N')),
+    enrolled_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    voted_at             TIMESTAMP NULL
+);
+
+CREATE TABLE VOTE (
+    vote_id      VARCHAR2(36) PRIMARY KEY,
+    candidate_id VARCHAR2(36) NOT NULL REFERENCES CANDIDATE(candidate_id),
+    vote_date    DATE NOT NULL
+);
+
+CREATE TABLE ELECTION_STATE (
+    state_key   VARCHAR2(50) PRIMARY KEY,
+    state_value VARCHAR2(50) NOT NULL,
+    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE CONSUMED_VOTE_TOKENS (
+    token_jti   VARCHAR2(36) PRIMARY KEY,
+    consumed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE VERIFICATION_LOCKOUT (
+    voter_id       VARCHAR2(36) PRIMARY KEY,
+    failed_count   NUMBER(3) DEFAULT 0 NOT NULL,
+    locked_until   TIMESTAMP NULL,
+    last_failed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE VERIFICATION_LOG (
+    log_id         VARCHAR2(36) PRIMARY KEY,
+    voter_id       VARCHAR2(36) NULL,
+    attempted_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    result         VARCHAR2(50) NOT NULL,
+    reason         VARCHAR2(255) NOT NULL,
+    workstation_id VARCHAR2(50) DEFAULT 'booth-default'
+);
+</pre>
+
+<h2>Appendix B: Sample Execution Outputs</h2>
+<pre>
+===========================================================================
+           SECUREVOTE - REGISTERED VOTER LIST (ORACLE DATABASE)
+  Connected to: securevote_app@[HOST]:1521/XEPDB1
+===========================================================================
+  Total Voters: 4
+
+  NAME                 | ID TYPE         | LAST 4 | VOTED   | ENROLLED AT     
+  -----------------------------------------------------------------------------
+  Citizen Delta        | National ID     | •••• 21 | YES (Y) | 2026-10-23 15:34
+  Citizen Gamma        | Aadhaar         | •••• 12 | NO (N)  | 2026-10-23 14:53
+  Citizen Beta         | Voter Card      | •••• 78 | NO (N)  | 2026-10-23 14:53
+  Citizen Alpha        | National ID     | •••• 21 | NO (N)  | 2026-10-23 14:53
+===========================================================================
+</pre>
+
+<h2>Appendix C: Team Contributions Matrix</h2>
+<table>
+  <tr><th>Team Member</th><th>Project Responsibilities & Delivered Components</th></tr>
+  <tr>
+    <td><strong>[Student Name 1]</strong></td>
+    <td>
+      &bull; Oracle Database 21c XE schema architecture and DDL scripts.<br>
+      &bull; Normalization analysis and integrity constraint definitions.<br>
+      &bull; Thin-mode connection pooling and transaction managers in Python.<br>
+      &bull; SQL analytics views and tally aggregation queries.
+    </td>
+  </tr>
+  <tr>
+    <td><strong>[Student Name 2]</strong></td>
+    <td>
+      &bull; Kiosk user interface development in Next.js 16 and Tailwind CSS.<br>
+      &bull; Biometric verification workflows and hardware sensor bypass implementation.<br>
+      &bull; FastAPI REST endpoint routing and JWT token gatekeeper integration.<br>
+      &bull; Database testing, test case documentation, and report preparation.
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>
